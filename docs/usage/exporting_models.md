@@ -17,6 +17,8 @@ Arguments:
   be excluded from the returned dictionary; default `False`
 * `exclude_none`: whether fields which are equal to `None` should be excluded from the returned dictionary; default
   `False`
+* `exclude_extra`: whether fields which are not part of the explicit model definition should be excluded from the 
+  returned dictionary; default `False`
 
 Example:
 
@@ -74,6 +76,8 @@ Arguments:
   be excluded from the returned dictionary; default `False`
 * `exclude_none`: whether fields which are equal to `None` should be excluded from the returned dictionary; default
   `False`
+* `exclude_extra`: whether fields which are not part of the explicit model definition should be excluded from the 
+  returned dictionary; default `False`
 * `encoder`: a custom encoder function passed to the `default` argument of `json.dumps()`; defaults to a custom
   encoder designed to take care of all common types
 * `**dumps_kwargs`: any other keyword arguments are passed to `json.dumps()`, e.g. `indent`.
