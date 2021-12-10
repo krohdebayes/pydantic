@@ -1464,6 +1464,60 @@ def test_exclude_none_with_extra():
     assert m.dict() == {'a': 'a', 'b': 'b', 'c': None}
 
 
+def test_exclude_extra():
+    class Foo(BaseModel):
+        a: int
+
+        class Config:
+            extra = Extra.allow
+
+    m = Foo(a=5)
+    assert m.dict(exclude_extra=True) == {'a': 5}
+
+    m = Foo(**{'a': 5})
+    assert m.dict(exclude_extra=True) == {'a': 5}
+
+    m = Foo(**{'a': 3, 'b': 1})
+    assert m.dict(exclude_extra=True) == {'a': 3}
+    assert m.json(exclude_extra=True) == '{"a": 3}'
+
+
+def test_exclude_extra_propagates():
+    class Bar(BaseModel):
+        b: int
+
+        class Config:
+            extra = Extra.allow
+
+    class Foo(BaseModel):
+        a: int
+        bar: Bar
+
+        class Config:
+            extra = Extra.allow
+
+    m = Foo(**{'a': 5, 'c': 1, 'bar': {'b': 2, 'd': 7}})
+    assert m.dict(exclude_extra=True) == {'a': 5, 'bar': {'b': 2}}
+
+
+def test_exclude_extra_interferences():
+    class Foo(BaseModel):
+        a: int = 1
+        b: Optional[int]
+        c: Optional[int] = None
+
+        class Config:
+            extra = Extra.allow
+
+    m = Foo(**{'a': 1, 'b': None, 'd': 7, 'e': None})
+    assert m.dict(exclude_extra=True, exclude_none=True) == {'a': 1}
+    assert m.dict(exclude_extra=True, exclude_unset=True) == {'a': 1, 'b': None}
+    assert m.dict(exclude_extra=True, exclude_defaults=True) == {}
+
+    assert m.dict(exclude_extra=True, exclude={'b'}) == {'a': 1, 'c': None}
+    assert m.dict(exclude_extra=True, include={'a', 'd'}) == {'a': 1}
+
+
 def test_str_method_inheritance():
     import pydantic
 
