@@ -420,6 +420,7 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
+        exclude_extra: bool = False,
     ) -> 'DictStrAny':
         """
         Generate a dictionary representation of the model, optionally specifying which fields to include or exclude.
@@ -441,6 +442,7 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
                 exclude_unset=exclude_unset,
                 exclude_defaults=exclude_defaults,
                 exclude_none=exclude_none,
+                exclude_extra=exclude_extra,
             )
         )
 
@@ -454,6 +456,7 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
+        exclude_extra: bool = False,
         encoder: Optional[Callable[[Any], Any]] = None,
         **dumps_kwargs: Any,
     ) -> str:
@@ -481,6 +484,7 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
                 exclude_unset=exclude_unset,
                 exclude_defaults=exclude_defaults,
                 exclude_none=exclude_none,
+                exclude_extra=exclude_extra,
             )
         )
         if self.__custom_root_type__:
@@ -690,6 +694,7 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
         exclude_unset: bool,
         exclude_defaults: bool,
         exclude_none: bool,
+        exclude_extra: bool,
     ) -> Any:
 
         if isinstance(v, BaseModel):
@@ -701,6 +706,7 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
                     include=include,
                     exclude=exclude,
                     exclude_none=exclude_none,
+                    exclude_extra=exclude_extra,
                 )
                 if ROOT_KEY in v_dict:
                     return v_dict[ROOT_KEY]
@@ -722,6 +728,7 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
                     include=value_include and value_include.for_element(k_),
                     exclude=value_exclude and value_exclude.for_element(k_),
                     exclude_none=exclude_none,
+                    exclude_extra=exclude_extra,
                 )
                 for k_, v_ in v.items()
                 if (not value_exclude or not value_exclude.is_excluded(k_))
@@ -739,6 +746,7 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
                     include=value_include and value_include.for_element(i),
                     exclude=value_exclude and value_exclude.for_element(i),
                     exclude_none=exclude_none,
+                    exclude_extra=exclude_extra,
                 )
                 for i, v_ in enumerate(v)
                 if (not value_exclude or not value_exclude.is_excluded(i))
@@ -783,6 +791,7 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
+        exclude_extra: bool = False,
     ) -> 'TupleGenerator':
 
         # Merge field set excludes with explicit exclude parameter with explicit overriding field set options.
@@ -794,9 +803,11 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
             include = ValueItems.merge(self.__include_fields__, include, intersect=True)
 
         allowed_keys = self._calculate_keys(
-            include=include, exclude=exclude, exclude_unset=exclude_unset  # type: ignore
+            include=include, exclude=exclude, exclude_unset=exclude_unset, exclude_extra=exclude_extra  # type: ignore
         )
-        if allowed_keys is None and not (to_dict or by_alias or exclude_unset or exclude_defaults or exclude_none):
+        if allowed_keys is None and not (
+            to_dict or by_alias or exclude_unset or exclude_defaults or exclude_none or exclude_extra
+        ):
             # huge boost for plain _iter()
             yield from self.__dict__.items()
             return
@@ -828,6 +839,7 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
                     exclude_unset=exclude_unset,
                     exclude_defaults=exclude_defaults,
                     exclude_none=exclude_none,
+                    exclude_extra=exclude_extra,
                 )
             yield dict_key, v
 
@@ -836,9 +848,10 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
         include: Optional['MappingIntStrAny'],
         exclude: Optional['MappingIntStrAny'],
         exclude_unset: bool,
+        exclude_extra: bool = False,
         update: Optional['DictStrAny'] = None,
     ) -> Optional[AbstractSet[str]]:
-        if include is None and exclude is None and exclude_unset is False:
+        if include is None and exclude is None and exclude_unset is False and exclude_extra is False:
             return None
 
         keys: AbstractSet[str]
@@ -846,6 +859,9 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
             keys = self.__fields_set__.copy()
         else:
             keys = self.__dict__.keys()
+
+        if exclude_extra:
+            keys -= {key for key in keys if key not in self.__fields__}
 
         if include is not None:
             keys &= include.keys()
